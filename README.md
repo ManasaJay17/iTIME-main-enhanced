@@ -1,8 +1,10 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
+# iTIME Extended
+
+Extended version of iTIME with support for multiple spatial files, improved Ripley's K analysis, and bug fixes. Built by Manasa.
 
 # iTIME <img src="figures/hex.png" align="right" height="139" />
-
 iTIME (interactive Tumor Immune MicroEnvironment) is a `shiny`
 application that creates interactive figures for examining spatial
 organization of individual tumors and provide basic spatial and summary
