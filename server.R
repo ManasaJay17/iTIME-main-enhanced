@@ -641,6 +641,7 @@ shinyServer(function(input, output) {
     
     # MJ New code to filter non-marker columns
     
+    
     output$choose_ripley = renderUI({
       req(spatial_data())  # Ensure spatial data is uploaded
       
@@ -656,9 +657,14 @@ shinyServer(function(input, output) {
         return("No valid marker columns found in the uploaded spatial file.")
       }
       
-      selectInput("ripleys_selection", "Choose Marker for Ripley’s K",
-                  choices = marker_choices,
-                  selected = marker_choices[1])
+      # ✅ Wrap both inputs in a tagList to return them together
+      tagList(
+        selectInput("ripleys_selection", "Choose Marker for Ripley’s K",
+                    choices = marker_choices,
+                    #selected = marker_choices[1]),
+                    selected = NULL),
+        checkboxInput("permute_marker", "Permute marker labels (for control)", value = FALSE)
+      )
     })
     
     
@@ -706,11 +712,62 @@ shinyServer(function(input, output) {
         print("Checking formatted data before running Ripley's K:")
         print(str(formatted_data))
         
+        # Stop if no points are left after filtering
+        if (nrow(formatted_data) < 5) {
+          showNotification("Not enough positive cells for the selected marker to run spatial analysis.", type = "error")
+          return(NULL)
+        }
+        
+
         incProgress(0.25, detail = "Running Ripley's K...")
         ripley = Ripley(formatted_data, input$ripleys_selection)
         
         incProgress(0.25 , detail = "Permuting CSR for Ripley's K...")
-        ripley2 = Permute_positives_r(data = formatted_data, ripleys_list = ripley, cell_type = input$ripleys_selection)
+        #ripley2 = Permute_positives_r(data = formatted_data, ripleys_list = ripley, cell_type = input$ripleys_selection)
+        
+        if (input$permute_marker) {
+          message("Permutation mode activated: shuffling marker ", input$ripleys_selection)
+          
+          # ✅ Use correct argument name: marker_col instead of cell_type
+          permuted_data <- Permute_positives_K(spatial_data(), marker_col = input$ripleys_selection)
+          
+          # ✅ Use permuted data to construct ppp object for Ripley’s K
+          formatted_permuted_data = permuted_data %>%
+            filter(.[[input$ripleys_selection]] == 1) %>%
+            select(Xloc, Yloc, all_of(input$ripleys_selection))
+          
+          ppp_obj <- ppp(
+            x = formatted_permuted_data$Xloc,
+            y = formatted_permuted_data$Yloc,
+            window = owin(
+              xrange = range(formatted_permuted_data$Xloc, na.rm = TRUE),
+              yrange = range(formatted_permuted_data$Yloc, na.rm = TRUE)
+            )
+          )
+          
+          ripley2 = list(
+            as.data.frame(Kest(ppp_obj)),                       # observed K
+            as.data.frame(envelope(ppp_obj, fun = Kest, nsim=100)), # CSR envelope
+            NULL                                                # placeholder for perm data if needed
+          )
+          
+        } else {
+          ppp_obj <- ppp(
+            x = formatted_data$Xloc,
+            y = formatted_data$Yloc,
+            window = owin(
+              xrange = range(formatted_data$Xloc, na.rm = TRUE),
+              yrange = range(formatted_data$Yloc, na.rm = TRUE)
+            )
+          )
+          ripley2 = list(
+            as.data.frame(Kest(ppp_obj)),
+            as.data.frame(envelope(ppp_obj, fun = Kest, nsim = 100)),
+            NULL
+          )
+        }
+        
+        
         
         incProgress(0.25, detail = "Nearest Neighbor Analysis...")
         g = NN_G(formatted_data, input$ripleys_selection)
@@ -728,7 +785,8 @@ shinyServer(function(input, output) {
     spatialStatsPlot = reactive({
         validate(need(input$ripleys_selection !="", "Please wait while calculations are running....."))
         if(input$ripleysEstimator %in% c("M", "K", "L")){
-            Ripley_plot(ripley_data = ripley_data()[[1]], estimator = input$ripleysEstimator)
+          Ripley_plot(ripley_data = ripley_data()[[1]], estimator = input$ripleysEstimator)
+         # plot(ripley_data()[[1]])  # Uses default plotting for `envelope` object
         } else if(input$ripleysEstimator == "G"){
             G_plot(G_data = ripley_data()[[2]])
         }
@@ -742,9 +800,48 @@ shinyServer(function(input, output) {
         filename = function() { paste(Sys.Date(), '-spatialStats_plot.pdf', sep='') },
         
         content = function(file) {
-            ggsave(file, plot = spatialStatsPlot(), device = "pdf",width = 12, height = 10, units = "in")
+          ggsave(file, plot = spatialStatsPlot(), device = "pdf",width = 12, height = 10, units = "in")
+          #pdf(file, width = 12, height = 10)
+          #plot(ripley_data()[[1]])  # Direct base R plot
+          #dev.off()
         }
     )
+    
+    
+    output$download_ripley_data <- downloadHandler(
+      filename = function() {
+        paste0("ripley_data_", input$ripleys_selection, "_", Sys.Date(), ".csv")
+      },
+      content = function(file) {
+        ripley_obj <- ripley_data()
+        df <- NULL
+        
+        try({
+          # ✅ Go one level deeper
+          if (inherits(ripley_obj[[1]][[1]], "fv")) {
+            df <- as.data.frame(ripley_obj[[1]][[1]])
+          } else if (is.data.frame(ripley_obj[[1]][[1]])) {
+            df <- ripley_obj[[1]][[1]]
+          } else {
+            print("Export failed: Unrecognized format in ripley_obj[[1]][[1]]")
+          }
+        }, silent = TRUE)
+        
+        if (is.null(df) || !nrow(df)) {
+          shinyjs::alert("⚠️ Ripley K export data is empty.")
+          return(NULL)
+        }
+        
+        write.csv(df, file, row.names = FALSE)
+      },
+      contentType = "text/csv"
+    )
+    
+
+    
+    
+    
+    
     
 #Getting started RMD rendering
     

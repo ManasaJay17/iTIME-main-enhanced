@@ -22,6 +22,7 @@ ui = dashboardPage(
             menuItem("Multivariate Summary", tabName = 'multivariate', icon = icon('angle-double-right')),
             menuItem("Spatial", tabName = 'spatial', icon = icon('braille')),
             menuItem("About", tabName = 'about', icon = icon('glasses')),
+            useShinyjs(),
             tags$br(),
             fluidRow(column(12, align="center",
                             tags$br(),
@@ -248,8 +249,9 @@ ui = dashboardPage(
                         ),
                     box(width = 12, status = "primary",
                         column(width = 4, h2("Spatial  Plot Selections", style = "font-size:14pt"),
-                               uiOutput("choose_ripley")
-                               ,selectInput("ripleysEstimator", "Select an Estimator",
+                               uiOutput("choose_ripley"),
+                               #selectInput("ripleys_selection", "Choose Marker for Ripley’s K", choices = NULL),
+                               selectInput("ripleysEstimator", "Select an Estimator",
                                             choices = c("Ripley's K" = "K",
                                                         #"Besag's L" = "L",
                                                         #"Marcon's M" = "M",
@@ -258,7 +260,9 @@ ui = dashboardPage(
                                ),
                         column(width = 8, h2("Spatial Plot", align="center", style = "font-size:14pt"),
                                plotOutput("ripleysPlot", height = 350),
-                               downloadButton('download_ripley', 'Download Plot')
+                               downloadButton('download_ripley', 'Download Plot'),
+							   br(),
+							   downloadButton("download_ripley_data", "Download Ripley’s K Table (.csv)")
                                )
                         ),
                         HTML('<footer>

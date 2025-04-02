@@ -1,7 +1,7 @@
 #alex
 #permute CSR
 
-Permute_positives_g = function(data, g_list, cell_type, sims = 100){
+Permute_positives_g = function(data, g_list, cell_type, sims = 10){
   #data = data %>%
    # dplyr::mutate(xloc = (XMin + XMax)/2,
     #              yloc = (YMin + YMax)/2)

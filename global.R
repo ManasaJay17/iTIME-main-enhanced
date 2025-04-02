@@ -24,6 +24,7 @@ library(kableExtra)
 library(GLMMadaptive)
 library(knitr) 
 library(markdown)
+library(shinyjs)
 
 custom_blue <- {shinyDashboardThemeDIY(
   ### general
@@ -149,3 +150,14 @@ custom_blue <- {shinyDashboardThemeDIY(
   ,tableBorderTopSize = 1
   ,tableBorderRowSize = 1
 )}
+
+
+# Utility: Permute positives for Ripley's K
+Permute_positives_K <- function(data, marker) {
+  positive_indices <- which(data[[marker]] == 1)
+  n <- length(positive_indices)
+  shuffled_indices <- sample(1:nrow(data), n)
+  data[[marker]] <- 0
+  data[[marker]][shuffled_indices[1:n]] <- 1
+  return(data)
+}
