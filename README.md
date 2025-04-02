@@ -13,6 +13,5 @@ Extended version of iTIME with support for multiple spatial files, improved Ripl
 
 Changes based on meeting on March 21st
 
-![image](https://github.com/user-attachments/assets/26b9d3af-0053-4d7c-b2de-532c633d2986)
 
-
+![image](https://github.com/user-attachments/assets/b10ddf6e-d4ac-413f-a288-f5a798e0f2a2)
